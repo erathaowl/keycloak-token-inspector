@@ -34,7 +34,7 @@ Designed for debugging and development environments.
 Clone the repository:
 
 ```bash
-git clone https://github.com/erathaowl/keycloak-test.git
+git clone https://github.com/erathaowl/keycloak-token-inspector.git
 cd keycloak-test
 ```
 
