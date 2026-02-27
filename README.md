@@ -161,7 +161,7 @@ Exceptions are rendered using `rich` with a colored traceback.
 ## Dev installation
 
 ```
-git git clone https://github.com/erathaowl/keycloak-token-inspector.git .
+git clone https://github.com/erathaowl/keycloak-token-inspector.git .
 uv sync
 uv run pip install -e .
 uv run keycloak-token-inspector
