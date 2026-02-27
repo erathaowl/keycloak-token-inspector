@@ -35,7 +35,7 @@ Clone the repository:
 
 ```bash
 git clone https://github.com/erathaowl/keycloak-token-inspector.git
-cd keycloak-test
+cd keycloak-token-inspector
 ```
 
 Install dependencies:
@@ -47,7 +47,7 @@ uv sync
 Run directly:
 
 ```bash
-uv run python token_test.py
+uv run python main.py
 ```
 
 ---
@@ -104,8 +104,6 @@ CLI arguments override `.env` values.
 ```bash
 uv run keycloak-token-inspector \
   --realm myrealm \
-  --username user \
-  --password secret \
   --verify false
 ```
 
@@ -114,16 +112,6 @@ uv run keycloak-token-inspector \
 ```bash
 uv run keycloak-token-inspector --env-file /path/to/.env
 ```
-
-### Interactive mode
-
-Prompt for parameters interactively:
-
-```bash
-uv run keycloak-token-inspector --interactive
-```
-
-Defaults are pre-filled from `.env`.
 
 ---
 
@@ -170,28 +158,15 @@ Exceptions are rendered using `rich` with a colored traceback.
 
 ---
 
-## Limitations
+## Dev installation
 
-* Uses **Password Grant** (not recommended for modern production architectures)
-* JWT is decoded **without signature verification**
-* Does not validate `iss`, `aud`, `exp`
-* Intended for debugging and inspection only
-
----
-
-## Possible Extensions
-
-* JWKS-based signature verification
-* Client credentials grant support
-* Machine-readable JSON output mode
-* Proxy support
-* Claim filtering
-
----
+```
+git git clone https://github.com/erathaowl/keycloak-token-inspector.git .
+uv sync
+uv run pip install -e .
+uv run keycloak-token-inspector
+```
 
 ## License
 
 MIT
-
-```
-```

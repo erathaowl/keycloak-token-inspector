@@ -182,14 +182,15 @@ def main() -> int:
     )
 
     # CLI overrides (if omitted, values come from .env / defaults)
-    parser.add_argument("--keycloak-url", default=None)
-    parser.add_argument("--base-path", default=None, help="Optional base path like /auth for older setups")
-    parser.add_argument("--realm", default=None)
+    parser.add_argument("-k", "--keycloak-url", default=None)
+    parser.add_argument("-b", "--base-path", default=None, help="Optional base path like /auth for older setups")
+    parser.add_argument("-r", "--realm", default=None)
     # parser.add_argument("--client-id", default=None)
     # parser.add_argument("--client-secret", default=None)
     # parser.add_argument("--username", default=None)
     # parser.add_argument("--password", default=None)
     parser.add_argument("--refresh", action="store_true", help="Optionally print refresh-token")
+    parser.add_argument("-q", "--quiet", action="store_true", help="Suppress user prompts (use config values directly)")
     parser.add_argument(
         "--verify",
         default=None,
@@ -198,7 +199,8 @@ def main() -> int:
 
     args = parser.parse_args()
     cfg = load_config(args.env_file)
-    cfg = prompt_for_config(cfg)
+    if not args.quiet:
+        cfg = prompt_for_config(cfg)
 
 
     # Precedence: CLI > .env > defaults

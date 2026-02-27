@@ -1,5 +1,5 @@
 [project]
-name = "kc-test"
+name = "keycloak-token-inspector"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -10,3 +10,7 @@ dependencies = [
     "requests>=2.32.5",
     "rich>=14.3.3",
 ]
+
+[project.scripts]
+# CLI entrypoint so `uv run keycloak-token-inspector` can find the program
+keycloak-token-inspector = "main:main"
