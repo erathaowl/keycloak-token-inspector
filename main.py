@@ -10,12 +10,11 @@ from typing import Any, Dict, Optional, Tuple
 from rich.console import Console
 from rich.prompt import Prompt, Confirm
 from rich.json import JSON
-import urllib3
 
 import requests
 from environs import Env
 
-urllib3.disable_warnings()
+requests.packages.urllib3.disable_warnings()
 console = Console()
 
 
@@ -54,7 +53,8 @@ def load_config(env_file: Optional[str]) -> Dict[str, Any]:
     else:
         print(f"[env] not found: {env_path} (using defaults / OS env)", file=sys.stderr)
 
-    verify = _parse_verify(env.str("KEYCLOAK_VERIFY", "true"))
+    verify = _parse_verify(env.str("KEYCLOAK_VERIFY_TLS", "true"))
+    timeout_s=env.int("KEYCLOAK_TIMEOUT", 30),
 
     return {
         "keycloak_url": env.str("KEYCLOAK_URL", "http://localhost:8080"),
@@ -65,6 +65,7 @@ def load_config(env_file: Optional[str]) -> Dict[str, Any]:
         "username": env.str("KEYCLOAK_USERNAME", "admin"),
         "password": env.str("KEYCLOAK_PASSWORD", "admin"),
         "verify": verify,
+        "timeout": timeout_s,
     }
 
 def prompt_for_config(cfg: Dict[str, Any]) -> Dict[str, Any]:
@@ -145,6 +146,7 @@ def get_token(
         username: str,
         password: str,
         verify: Any,
+        timeout: int,
     ) -> Dict[str, Any]:
     data = {
         "grant_type": "password",
@@ -159,7 +161,7 @@ def get_token(
         token_url,
         data=data,
         headers={"Content-Type": "application/x-www-form-urlencoded"},
-        timeout=20,
+        timeout=timeout,
         verify=verify,
     )
 
@@ -214,6 +216,7 @@ def main() -> int:
     password = cfg["password"]
 
     verify = _parse_verify(args.verify) if args.verify is not None else cfg["verify"]
+    timeout = cfg["timeout"]
 
     token_url = build_token_url(keycloak_url, base_path, realm)
 
@@ -228,6 +231,7 @@ def main() -> int:
         username=username,
         password=password,
         verify=verify,
+        timeout=timeout,
     )
 
     access_token = token_response.get("access_token")

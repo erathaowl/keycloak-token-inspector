@@ -12,8 +12,9 @@ dependencies = [
 ]
 
 [project.scripts]
-# CLI entrypoint so `uv run keycloak-token-inspector` can find the program
-keycloak-token-inspector = "main:main"
+# CLI entrypoint so `uv run keycloak-....` can find the programs
+keycloak-token-inspector = "cli:token_inspector"
+keycloak-user-roles = "cli:user_roles"
 
 [tool.uv]
 package = true
