@@ -24,18 +24,12 @@ def _find_default_env_file() -> Path:
 
 
 def _parse_verify(value: str) -> Any:
-    """
-    requests 'verify' parameter can be:
-      - True / False
-      - path to a CA bundle file
-    """
     v = (value or "true").strip()
     vl = v.lower()
     if vl in ("true", "1", "yes", "y", "on"):
         return True
     if vl in ("false", "0", "no", "n", "off"):
         return False
-    # otherwise assume it's a path
     return v
 
 
@@ -58,7 +52,7 @@ def load_config(env_file: Optional[str]) -> Dict[str, Any]:
 
     return {
         "keycloak_url": env.str("KEYCLOAK_URL", "http://localhost:8080"),
-        "base_path": env.str("KEYCLOAK_BASE_PATH", ""),  # e.g. "/auth" for older setups
+        "base_path": env.str("KEYCLOAK_BASE_PATH", ""),
         "realm": env.str("KEYCLOAK_REALM", "master"),
         "client_id": env.str("KEYCLOAK_CLIENT_ID", "admin-cli"),
         "client_secret": env.str("KEYCLOAK_CLIENT_SECRET", ""),
@@ -69,10 +63,6 @@ def load_config(env_file: Optional[str]) -> Dict[str, Any]:
     }
 
 def prompt_for_config(cfg: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Allow user to override client and user parameters loaded from config
-    """
-
     client_id = Prompt.ask(
         "Client ID",
         default=str(cfg["client_id"]),
@@ -112,10 +102,6 @@ def _b64url_decode(data: str) -> bytes:
 
 
 def decode_jwt_no_verify(token: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-    """
-    Decode JWT header+payload WITHOUT verifying signature.
-    Returns (header, payload).
-    """
     try:
         import jwt  # PyJWT
 
@@ -183,14 +169,9 @@ def main() -> int:
         help="Path to .env (default: .env next to the script).",
     )
 
-    # CLI overrides (if omitted, values come from .env / defaults)
     parser.add_argument("-k", "--keycloak-url", default=None)
     parser.add_argument("-b", "--base-path", default=None, help="Optional base path like /auth for older setups")
     parser.add_argument("-r", "--realm", default=None)
-    # parser.add_argument("--client-id", default=None)
-    # parser.add_argument("--client-secret", default=None)
-    # parser.add_argument("--username", default=None)
-    # parser.add_argument("--password", default=None)
     parser.add_argument("--refresh", action="store_true", help="Optionally print refresh-token")
     parser.add_argument("-q", "--quiet", action="store_true", help="Suppress user prompts (use config values directly)")
     parser.add_argument(
@@ -204,8 +185,6 @@ def main() -> int:
     if not args.quiet:
         cfg = prompt_for_config(cfg)
 
-
-    # Precedence: CLI > .env > defaults
     keycloak_url = args.keycloak_url or cfg["keycloak_url"]
     base_path = args.base_path or cfg["base_path"]
     realm = args.realm or cfg["realm"]
@@ -220,7 +199,6 @@ def main() -> int:
 
     token_url = build_token_url(keycloak_url, base_path, realm)
 
-    # Minimal debug (do not print secrets)
     print(f"[cfg] token_url={token_url}", file=sys.stderr)
     print(f"[cfg] client_id={client_id} username={username} realm={realm} verify={verify}", file=sys.stderr)
 
@@ -255,7 +233,6 @@ def main() -> int:
     console.print(JSON(json.dumps(payload, ensure_ascii=False)))
     print()
 
-    # Optional: show refresh_token raw (if present)
     if args.refresh:
         refresh_token = token_response.get("refresh_token")
         if refresh_token:

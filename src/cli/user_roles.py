@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-'''
-Retrieve ALL effective roles for a user, including group + parent-group inheritance.
-    require a client "client-authentication" and "service-account" flags enabled, 
-    with "view-users" and "query-users" role (e.g. realm-management) and its client secret.
-'''
 from __future__ import annotations
 
 import argparse
@@ -51,7 +46,6 @@ class KeycloakAdmin:
         self.session = requests.Session()
         self._token: Optional[str] = None
 
-        # simple cache to avoid redundant group lookups when climbing group hierarchy
         self._group_cache: Dict[str, Dict[str, Any]] = {}
 
     def _url(self, path: str) -> str:
@@ -95,8 +89,6 @@ class KeycloakAdmin:
             return None
         return r.json()
 
-    # ---------- user resolution ----------
-
     def resolve_user_id(self, *, user_id: Optional[str], username: Optional[str]) -> str:
         if user_id:
             return user_id
@@ -115,21 +107,15 @@ class KeycloakAdmin:
             )
         return users[0]["id"]
 
-    # ---------- clients / mappings ----------
-
     def user_role_mappings(self, user_id: str) -> Dict[str, Any]:
-        # direct mappings for the user: realmMappings + clientMappings
         return self._get(
             f"/admin/realms/{self.cfg.realm}/users/{user_id}/role-mappings"
         ) or {}
 
     def group_role_mappings(self, group_id: str) -> Dict[str, Any]:
-        # direct mappings for the group: realmMappings + clientMappings
         return self._get(
             f"/admin/realms/{self.cfg.realm}/groups/{group_id}/role-mappings"
         ) or {}
-
-    # ---------- effective/composite (user) ----------
 
     def user_effective_realm_roles(self, user_id: str) -> List[Dict[str, Any]]:
         return self._get(
@@ -141,14 +127,10 @@ class KeycloakAdmin:
             f"/admin/realms/{self.cfg.realm}/users/{user_id}/role-mappings/clients/{client_uuid}/composite"
         ) or []
 
-    # ---------- groups ----------
-
     def user_groups(self, user_id: str) -> List[Dict[str, Any]]:
-        # list of groups the user is a member of (usually includes id, name, path; may include parentId depending on params/version)
         return self._get(f"/admin/realms/{self.cfg.realm}/users/{user_id}/groups") or []
 
     def get_group(self, group_id: str) -> Dict[str, Any]:
-        # full group representation (includes parentId, path, etc.)
         if group_id in self._group_cache:
             return self._group_cache[group_id]
         g = self._get(f"/admin/realms/{self.cfg.realm}/groups/{group_id}") or {}
@@ -161,16 +143,11 @@ class KeycloakAdmin:
         ) or []
 
     def group_effective_client_roles(self, group_id: str, client_uuid: str) -> List[Dict[str, Any]]:
-        # NOTE: {client_uuid} = client id (UUID), not human readable clientId
         return self._get(
             f"/admin/realms/{self.cfg.realm}/groups/{group_id}/role-mappings/clients/{client_uuid}/composite"
         ) or []
 
     def group_ancestors_inclusive(self, group_id: str) -> List[Dict[str, Any]]:
-        """
-        Returns [group, parent, parent-of-parent, ...] up to root, deduplicated by id.
-        Uses GroupRepresentation.parentId to walk upwards.
-        """
         out: List[Dict[str, Any]] = []
         seen: Set[str] = set()
 
@@ -184,8 +161,6 @@ class KeycloakAdmin:
             current_id = g.get("parentId")
         return out
 
-    # ---------- final aggregation ----------
-
     def get_all_effective_roles_with_group_hierarchy(
         self,
         user_id: str,
@@ -195,7 +170,6 @@ class KeycloakAdmin:
         realm_roles: Set[str] = set()
         client_roles: Dict[str, Set[str]] = {}
 
-        # ---- 1) USER effective roles ----
         realm_roles |= _names(self.user_effective_realm_roles(user_id))
 
         user_m = self.user_role_mappings(user_id)
@@ -208,14 +182,12 @@ class KeycloakAdmin:
             if roles:
                 client_roles.setdefault(str(client_id_human), set()).update(roles)
 
-        # ---- 2) GROUPS + PARENTS effective roles ----
         groups_debug: List[Dict[str, Any]] = []
         visited_group_ids: Set[str] = set()
 
         if include_groups:
             direct_groups = self.user_groups(user_id)
 
-            # compute closure: all direct groups + their ancestors
             all_group_reprs: List[Dict[str, Any]] = []
             for g in direct_groups:
                 gid = g.get("id")
@@ -223,7 +195,6 @@ class KeycloakAdmin:
                     continue
                 all_group_reprs.extend(self.group_ancestors_inclusive(gid))
 
-            # unique by id (preserve order)
             unique_groups: List[Dict[str, Any]] = []
             for g in all_group_reprs:
                 gid = g.get("id")
@@ -232,7 +203,6 @@ class KeycloakAdmin:
                 visited_group_ids.add(gid)
                 unique_groups.append(g)
 
-            # aggregate effective roles for each group in closure
             for g in unique_groups:
                 gid = g.get("id")
                 if not gid:
@@ -242,11 +212,8 @@ class KeycloakAdmin:
                     {"id": gid, "path": g.get("path"), "name": g.get("name"), "parentId": g.get("parentId")}
                 )
 
-                # realm roles (effective)
                 realm_roles |= _names(self.group_effective_realm_roles(gid))
 
-                # # client roles:
-                # to avoid losing client roles assigned to group, we read groupMappings of the group *before* climbing up
                 gm = self.group_role_mappings(gid)
                 group_client_mappings = gm.get("clientMappings") or {}
                 for client_id_human, cm in group_client_mappings.items():
@@ -265,7 +232,7 @@ class KeycloakAdmin:
             "debug": {
                 "user_clientMappings_keys": sorted(list(user_client_mappings.keys())),
                 "groups_closure_count": len(visited_group_ids),
-                "groups_closure": groups_debug,  # include path/parentId to verify you climbed correctly
+                "groups_closure": groups_debug,
             },
         }
 

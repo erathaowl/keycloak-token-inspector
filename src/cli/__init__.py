@@ -6,7 +6,7 @@ def token_inspector():
     return main_token_inspector()
 
 def user_roles():
-    return main_user_roles()   
+    return main_user_roles()
 
 
 if __name__ == "__main__":
@@ -18,11 +18,9 @@ if __name__ == "__main__":
 
     # Subcommand for token inspector
     parser_token = subparsers.add_parser("token-inspector", help="Inspect Keycloak tokens")
-    # (Add any specific arguments for token inspector if needed)
 
     # Subcommand for user roles
     parser_roles = subparsers.add_parser("user-roles", help="Retrieve effective user roles from Keycloak")
-    # (Add any specific arguments for user roles if needed)
 
     args = parser.parse_args()
 
